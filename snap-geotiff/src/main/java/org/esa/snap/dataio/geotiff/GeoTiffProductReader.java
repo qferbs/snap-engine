@@ -16,6 +16,10 @@
 package org.esa.snap.dataio.geotiff;
 
 import com.bc.ceres.core.ProgressMonitor;
+import com.bc.ceres.glevel.MultiLevelModel;
+import com.bc.ceres.glevel.MultiLevelSource;
+import com.bc.ceres.glevel.support.DefaultMultiLevelImage;
+import com.bc.ceres.glevel.support.DefaultMultiLevelModel;
 import it.geosolutions.imageio.plugins.tiff.BaselineTIFFTagSet;
 import it.geosolutions.imageio.plugins.tiff.GeoTIFFTagSet;
 import it.geosolutions.imageio.plugins.tiff.TIFFField;
@@ -40,6 +44,7 @@ import org.esa.snap.core.datamodel.Placemark;
 import org.esa.snap.core.datamodel.Product;
 import org.esa.snap.core.datamodel.ProductData;
 import org.esa.snap.core.datamodel.ProductNodeGroup;
+import org.esa.snap.core.datamodel.RasterDataNode;
 import org.esa.snap.core.datamodel.TiePointGeoCoding;
 import org.esa.snap.core.datamodel.TiePointGrid;
 import org.esa.snap.core.datamodel.VirtualBand;
@@ -71,12 +76,14 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import javax.media.jai.PlanarImage;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Rectangle;
+import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.image.DataBuffer;
 import java.awt.image.IndexColorModel;
@@ -91,6 +98,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -148,55 +156,56 @@ public class GeoTiffProductReader extends AbstractProductReader {
                                           int destWidth, int destHeight,
                                           ProductData destBuffer, ProgressMonitor pm) throws IOException {
 
-        if (isGlobalShifted180) {
-            // SPECIAL CASE of a global geographic lat/lon with lon from 0..360 instead of -180..180
-            readBandRasterDataImplGlobalShifted180(sourceOffsetX, sourceOffsetY, sourceWidth, sourceHeight,
-                                                   sourceStepX, sourceStepY, destBand, destOffsetX, destOffsetY,
-                                                   destWidth, destHeight, destBuffer, pm);
-        } else {
-            // the normal case!!
-            final int destSize = destWidth * destHeight;
-            pm.beginTask("Reading data...", 3);
-            try {
-                final Raster data = readRect(sourceOffsetX, sourceOffsetY, sourceStepX, sourceStepY,
-                                             destOffsetX, destOffsetY, destWidth, destHeight);
-                pm.worked(1);
-
-                Integer bandIdx = bandMap.get(destBand);
-                if (bandIdx == null) {
-                    bandIdx = 0;
-                }
-                final DataBuffer dataBuffer = data.getDataBuffer();
-                final SampleModel sampleModel = data.getSampleModel();
-                final int dataBufferType = dataBuffer.getDataType();
-
-                boolean isInteger = dataBufferType == DataBuffer.TYPE_SHORT
-                                    || dataBufferType == DataBuffer.TYPE_USHORT
-                                    || dataBufferType == DataBuffer.TYPE_INT;
-                boolean isIntegerTarget = destBuffer.getElems() instanceof int[];
-                if (isInteger && isIntegerTarget) {
-                    sampleModel.getSamples(0, 0, data.getWidth(), data.getHeight(), bandIdx, (int[]) destBuffer.getElems(), dataBuffer);
-                } else if (dataBufferType == DataBuffer.TYPE_FLOAT && destBuffer.getElems() instanceof float[]) {
-                    sampleModel.getSamples(0, 0, data.getWidth(), data.getHeight(), bandIdx, (float[]) destBuffer.getElems(), dataBuffer);
-                } else {
-                    final double[] dArray = new double[destSize];
-                    sampleModel.getSamples(0, 0, data.getWidth(), data.getHeight(), bandIdx, dArray, dataBuffer);
-
-                    if (destBuffer.getElems() instanceof double[]) {
-                        //noinspection SuspiciousSystemArraycopy
-                        System.arraycopy(dArray, 0, destBuffer.getElems(), 0, dArray.length);
-                    } else {
-                        int i = 0;
-                        for (double value : dArray) {
-                            destBuffer.setElemDoubleAt(i++, value);
-                        }
-                    }
-                }
-                pm.worked(1);
-            } finally {
-                pm.done();
-            }
-        }
+        throw new IllegalStateException("Should not come here!");
+//        if (isGlobalShifted180) {
+//            // SPECIAL CASE of a global geographic lat/lon with lon from 0..360 instead of -180..180
+//            readBandRasterDataImplGlobalShifted180(sourceOffsetX, sourceOffsetY, sourceWidth, sourceHeight,
+//                                                   sourceStepX, sourceStepY, destBand, destOffsetX, destOffsetY,
+//                                                   destWidth, destHeight, destBuffer, pm);
+//        } else {
+//            // the normal case!!
+//            final int destSize = destWidth * destHeight;
+//            pm.beginTask("Reading data...", 3);
+//            try {
+//                final Raster data = readRect(sourceOffsetX, sourceOffsetY, sourceStepX, sourceStepY,
+//                                             destOffsetX, destOffsetY, destWidth, destHeight);
+//                pm.worked(1);
+//
+//                Integer bandIdx = bandMap.get(destBand);
+//                if (bandIdx == null) {
+//                    bandIdx = 0;
+//                }
+//                final DataBuffer dataBuffer = data.getDataBuffer();
+//                final SampleModel sampleModel = data.getSampleModel();
+//                final int dataBufferType = dataBuffer.getDataType();
+//
+//                boolean isInteger = dataBufferType == DataBuffer.TYPE_SHORT
+//                                    || dataBufferType == DataBuffer.TYPE_USHORT
+//                                    || dataBufferType == DataBuffer.TYPE_INT;
+//                boolean isIntegerTarget = destBuffer.getElems() instanceof int[];
+//                if (isInteger && isIntegerTarget) {
+//                    sampleModel.getSamples(0, 0, data.getWidth(), data.getHeight(), bandIdx, (int[]) destBuffer.getElems(), dataBuffer);
+//                } else if (dataBufferType == DataBuffer.TYPE_FLOAT && destBuffer.getElems() instanceof float[]) {
+//                    sampleModel.getSamples(0, 0, data.getWidth(), data.getHeight(), bandIdx, (float[]) destBuffer.getElems(), dataBuffer);
+//                } else {
+//                    final double[] dArray = new double[destSize];
+//                    sampleModel.getSamples(0, 0, data.getWidth(), data.getHeight(), bandIdx, dArray, dataBuffer);
+//
+//                    if (destBuffer.getElems() instanceof double[]) {
+//                        //noinspection SuspiciousSystemArraycopy
+//                        System.arraycopy(dArray, 0, destBuffer.getElems(), 0, dArray.length);
+//                    } else {
+//                        int i = 0;
+//                        for (double value : dArray) {
+//                            destBuffer.setElemDoubleAt(i++, value);
+//                        }
+//                    }
+//                }
+//                pm.worked(1);
+//            } finally {
+//                pm.done();
+//            }
+//        }
     }
 
     private void readBandRasterDataImplGlobalShifted180(int sourceOffsetX, int sourceOffsetY,
@@ -330,6 +339,10 @@ public class GeoTiffProductReader extends AbstractProductReader {
             applyGeoCoding(tiffInfo, imageMetadata, product);
         }
 
+        // needs to be done after the GeoCoding, otherwise the imageToModel transform is not yet set and considered by the
+        // multi-level source
+        setMultiLevelSources();
+
         TiffTagToMetadataConverter.addTiffTagsToMetadata(imageMetadata, tiffInfo, product.getMetadataRoot());
 
         if (inputFile != null) {
@@ -338,6 +351,15 @@ public class GeoTiffProductReader extends AbstractProductReader {
         setPreferredTiling(product);
 
         return product;
+    }
+
+    private void setMultiLevelSources() {
+        // causes some problems see issue https://senbox.atlassian.net/browse/SNAP-941
+        Set<Map.Entry<Band, Integer>> entries = bandMap.entrySet();
+        for (Map.Entry<Band, Integer> entry : entries) {
+            Band band = entry.getKey();
+            band.setSourceImage(new DefaultMultiLevelImage(new GeoTiffMultiLevelSource(band, entry.getValue(), imageReader)));
+        }
     }
 
     private void initBandsMap(Product product) {
@@ -760,4 +782,77 @@ public class GeoTiffProductReader extends AbstractProductReader {
         return datum;
     }
 
+    private static class GeoTiffMultiLevelSource implements MultiLevelSource {
+
+        private final RasterDataNode raster;
+        private final int imageIndex;
+        private final TIFFImageReader imageReader;
+        private final int levelCount;
+        private final RenderedImage[] levelImages;
+        private MultiLevelModel multiLevelModel;
+
+        public GeoTiffMultiLevelSource(RasterDataNode raster, int imageIndex, TIFFImageReader imageReader) {
+            this.raster = raster;
+            this.imageIndex = imageIndex;
+            this.imageReader = imageReader;
+            levelCount = DefaultMultiLevelModel.getLevelCount(raster.getRasterWidth(), raster.getRasterHeight());
+            this.levelImages = new RenderedImage[levelCount];
+        }
+
+        @Override
+        public MultiLevelModel getModel() {
+            if (multiLevelModel == null) {
+                final int w = raster.getRasterWidth();
+                final int h = raster.getRasterHeight();
+                final AffineTransform i2mTransform = Product.findImageToModelTransform(raster.getGeoCoding());
+                multiLevelModel = new DefaultMultiLevelModel(levelCount, i2mTransform, w, h);
+            }
+            return multiLevelModel;
+        }
+
+        @Override
+        public synchronized RenderedImage getImage(int level) {
+            checkLevel(level);
+            RenderedImage levelImage = levelImages[level];
+            if (levelImage == null) {
+                final ImageReadParam readParam = imageReader.getDefaultReadParam();
+                int subsampling = (int) getModel().getScale(level);
+                readParam.setSourceSubsampling(subsampling , subsampling, 0, 0);
+                readParam.setSourceBands(new int[]{imageIndex});
+
+                try {
+                    levelImage = imageReader.readAsRenderedImage(FIRST_IMAGE, readParam);
+                } catch (IOException e) {
+                    String msg = String.format("Not able to read data on level %d for raster %s", level, raster.getName());
+                    throw new IllegalStateException(msg, e);
+                }
+                levelImages[level] = levelImage;
+            }
+            return levelImage;
+
+        }
+
+        private void checkLevel(int level) {
+            if (level < 0 || level >= levelCount) {
+                throw new IllegalArgumentException("level=" + level);
+            }
+        }
+
+        @Override
+        public Shape getImageShape(int level) {
+            return null;
+        }
+
+        @Override
+        public void reset() {
+            for (int level = 0; level < levelImages.length; level++) {
+                RenderedImage levelImage = levelImages[level];
+                if (levelImage instanceof PlanarImage) {
+                    PlanarImage planarImage = (PlanarImage) levelImage;
+                    planarImage.dispose();
+                }
+                levelImages[level] = null;
+            }
+        }
+    }
 }
