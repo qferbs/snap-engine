@@ -41,7 +41,7 @@ import org.esa.snap.runtime.Config;
 import javax.media.jai.Interpolation;
 import javax.media.jai.operator.CropDescriptor;
 import javax.media.jai.operator.ScaleDescriptor;
-import java.awt.Rectangle;
+import java.awt.*;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
 
@@ -53,10 +53,18 @@ public class GeoCodingFactory {
                                                            final Band lonBand,
                                                            final String validMask,
                                                            final int searchRadius) {
-        if (useAlternatePixelGeoCoding()) {
-            return new PixelGeoCoding(latBand, lonBand, validMask, searchRadius);
+        // switching alternatives in case of OLCI product
+        if (latBand.getProduct().getName().matches("S3._OL_._.*")) {
+            if (useAlternatePixelGeoCoding()) {
+                return new PixelGeoCoding2(latBand, lonBand, validMask, searchRadius);
+            }
+            return new PixelGeoCoding(latBand, lonBand, validMask, 2);
+        } else {
+            if (useAlternatePixelGeoCoding()) {
+                return new PixelGeoCoding(latBand, lonBand, validMask, searchRadius);
+            }
+            return new PixelGeoCoding2(latBand, lonBand, validMask, 2);
         }
-        return new PixelGeoCoding2(latBand, lonBand, validMask, 2);
     }
 
     public static BasicPixelGeoCoding createPixelGeoCoding(final Band latBand,
