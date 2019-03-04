@@ -66,7 +66,6 @@ public final class ProductTemporalBinRenderer implements TemporalBinRenderer {
                                       File outputFile,
                                       String outputFormat,
                                       Rectangle outputRegion,
-                                      double pixelSize,
                                       GeoCoding geoCoding,
                                       ProductData.UTC startTime,
                                       ProductData.UTC endTime,
@@ -81,7 +80,7 @@ public final class ProductTemporalBinRenderer implements TemporalBinRenderer {
         this.outputRegion = new Rectangle(outputRegion);
         this.outputFile = outputFile;
 
-        //CrsGeoCoding geoCoding = createMapGeoCoding(outputRegion, pixelSize);
+//        CrsGeoCoding geoCoding = createMapGeoCoding(outputRegion, pixelSize);
 
         product = new Product(outputFile.getName(), "BINNED-L3", outputRegion.width, outputRegion.height);
         product.setProductWriter(productWriter);

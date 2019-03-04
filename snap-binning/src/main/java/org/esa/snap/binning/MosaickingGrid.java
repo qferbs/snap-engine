@@ -1,20 +1,23 @@
 package org.esa.snap.binning;
 
 import com.vividsolutions.jts.geom.Geometry;
-import java.awt.Dimension;
-import java.awt.Rectangle;
 import org.esa.snap.core.datamodel.GeoCoding;
 import org.esa.snap.core.datamodel.Product;
 
+import java.awt.Dimension;
+import java.awt.Rectangle;
+
 /**
- * TODO add API doc
+ * A {@link PlanetaryGrid} that supports the {@link CompositingType} MOSAICKING.
  *
  * @author marcoz
  */
 public interface MosaickingGrid extends PlanetaryGrid {
-    Product reprojectToGrid(Product var1);
 
-    Rectangle[] getDataSliceRectangles(Geometry var1, Dimension var2);
+    Product reprojectToGrid(Product product);
 
-    GeoCoding getGeoCoding(Rectangle var1);
+    Rectangle[] getDataSliceRectangles(Geometry sourceProductGeometry, Dimension tileSize);
+
+    GeoCoding getGeoCoding(Rectangle outputRegion);
+
 }

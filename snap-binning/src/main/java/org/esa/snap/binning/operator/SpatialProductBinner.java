@@ -21,7 +21,6 @@ import com.bc.ceres.glevel.MultiLevelImage;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.simplify.DouglasPeuckerSimplifier;
 import org.esa.snap.binning.BinningContext;
@@ -51,7 +50,6 @@ import org.esa.snap.runtime.Config;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
@@ -100,9 +98,9 @@ public class SpatialProductBinner {
         final MultiLevelImage maskImage;
         if (CompositingType.MOSAICKING.equals(compositingType)) {
             addMaskToProduct(variableContext.getValidMaskExpression(), product, addedVariableBands);
-            MosaickingGrid targetGrid = (MosaickingGrid) planetaryGrid;
+            MosaickingGrid mosaickingGrid = (MosaickingGrid) planetaryGrid;
             sourceProductGeometry = computeProductGeometry(product);
-            product = targetGrid.reprojectToGrid(product);
+            product = mosaickingGrid.reprojectToGrid(product);
             maskImage = product.getBand(BINNING_MASK_NAME).getGeophysicalImage();
         } else {
             maskImage = getMaskImage(product, variableContext.getValidMaskExpression());
@@ -112,9 +110,9 @@ public class SpatialProductBinner {
 
         final Rectangle[] sliceRectangles;
         if (CompositingType.MOSAICKING.equals(compositingType)) {
-            MosaickingGrid targetGrid = (MosaickingGrid) planetaryGrid;
+            MosaickingGrid mosaickingGrid = (MosaickingGrid) planetaryGrid;
             Dimension tileSize = product.getPreferredTileSize();
-            sliceRectangles = targetGrid.getDataSliceRectangles(sourceProductGeometry, tileSize);
+            sliceRectangles = mosaickingGrid.getDataSliceRectangles(sourceProductGeometry, tileSize);
         } else {
             final Dimension defaultSliceDimension = computeDefaultSliceDimension(product);
             sliceRectangles = computeDataSliceRectangles(maskImage, varImages, defaultSliceDimension);
@@ -315,42 +313,41 @@ public class SpatialProductBinner {
         return node;
     }
 
+    // duplicate from SupsetOp find the right place for it
     private static Geometry computeProductGeometry(Product product) {
-        GeneralPath[] paths = ProductUtils.createGeoBoundaryPaths(product);
-        Polygon[] polygons = new Polygon[paths.length];
-        GeometryFactory factory = new GeometryFactory();
+         final GeneralPath[] paths = ProductUtils.createGeoBoundaryPaths(product);
+         final Polygon[] polygons = new Polygon[paths.length];
+         final GeometryFactory factory = new GeometryFactory();
+         for (int i = 0; i < paths.length; i++) {
+             polygons[i] = convertAwtPathToJtsPolygon(paths[i], factory);
+         }
+         final DouglasPeuckerSimplifier peuckerSimplifier = new DouglasPeuckerSimplifier(
+                 polygons.length == 1 ? polygons[0] : factory.createMultiPolygon(polygons));
+         return peuckerSimplifier.getResultGeometry();
+     }
 
-        for(int i = 0; i < paths.length; ++i) {
-            polygons[i] = convertAwtPathToJtsPolygon(paths[i], factory);
-        }
+     private static Polygon convertAwtPathToJtsPolygon(Path2D path, GeometryFactory factory) {
+         final PathIterator pathIterator = path.getPathIterator(null);
+         ArrayList<double[]> coordList = new ArrayList<>();
+         int lastOpenIndex = 0;
+         while (!pathIterator.isDone()) {
+             final double[] coords = new double[6];
+             final int segType = pathIterator.currentSegment(coords);
+             if (segType == PathIterator.SEG_CLOSE) {
+                 // we should only detect a single SEG_CLOSE
+                 coordList.add(coordList.get(lastOpenIndex));
+                 lastOpenIndex = coordList.size();
+             } else {
+                 coordList.add(coords);
+             }
+             pathIterator.next();
+         }
+         final Coordinate[] coordinates = new Coordinate[coordList.size()];
+         for (int i1 = 0; i1 < coordinates.length; i1++) {
+             final double[] coord = coordList.get(i1);
+             coordinates[i1] = new Coordinate(coord[0], coord[1]);
+         }
 
-        DouglasPeuckerSimplifier peuckerSimplifier = new DouglasPeuckerSimplifier((Geometry)(polygons.length == 1 ? polygons[0] : factory.createMultiPolygon(polygons)));
-        return peuckerSimplifier.getResultGeometry();
-    }
-
-    private static Polygon convertAwtPathToJtsPolygon(Path2D path, GeometryFactory factory) {
-        PathIterator pathIterator = path.getPathIterator((AffineTransform)null);
-        ArrayList<double[]> coordList = new ArrayList();
-
-        int i1;
-        for(int lastOpenIndex = 0; !pathIterator.isDone(); pathIterator.next()) {
-            double[] coords = new double[6];
-            i1 = pathIterator.currentSegment(coords);
-            if (i1 == 4) {
-                coordList.add(coordList.get(lastOpenIndex));
-                lastOpenIndex = coordList.size();
-            } else {
-                coordList.add(coords);
-            }
-        }
-
-        Coordinate[] coordinates = new Coordinate[coordList.size()];
-
-        for(i1 = 0; i1 < coordinates.length; ++i1) {
-            double[] coord = (double[])coordList.get(i1);
-            coordinates[i1] = new Coordinate(coord[0], coord[1]);
-        }
-
-        return factory.createPolygon(factory.createLinearRing(coordinates), (LinearRing[])null);
-    }
+         return factory.createPolygon(factory.createLinearRing(coordinates), null);
+     }
 }
