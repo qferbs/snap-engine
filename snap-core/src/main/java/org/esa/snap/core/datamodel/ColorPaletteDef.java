@@ -19,10 +19,14 @@ import com.bc.ceres.core.Assert;
 import org.esa.snap.core.util.DefaultPropertyMap;
 import org.esa.snap.core.util.Guardian;
 import org.esa.snap.core.util.PropertyMap;
+import org.esa.snap.core.util.math.MathUtils;
 
 import java.awt.Color;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Vector;
@@ -30,16 +34,19 @@ import java.util.Vector;
 /**
  * The <code>ColorPaletteDef</code> class represents a curve that is used to transform the sample values of a
  * geo-physical band into color palette indexes.
- * <p> This special implementation of a gradation curve also provides separate color values for each of the tie points
+ * <p/>
+ * <p> This special implemnentation of a gradation curve also provides separate color values for each of the tie points
  * contained in the curve. This allows a better image interpretation because certain colors correspond to certain sample
  * values even if the curve points are used to create color gradient palettes.
  */
-public class ColorPaletteDef implements Cloneable  {
+public class ColorPaletteDef implements Cloneable {
 
     private final static String _PROPERTY_KEY_NUM_POINTS = "numPoints";
     private final static String _PROPERTY_KEY_COLOR = "color";
     private final static String _PROPERTY_KEY_SAMPLE = "sample";
     private final static String _PROPERTY_KEY_AUTODISTRIBUTE = "autoDistribute";
+    private final static String _PROPERTY_KEY_IS_LOG_SCALED = "isLogScaled";
+    private final static String _PROPERTY_KEY_SHORT_DESCRIPTION = "shortDescription";
 
     /**
      * this curve's points
@@ -48,19 +55,18 @@ public class ColorPaletteDef implements Cloneable  {
     private int numColors;
     private boolean discrete;
     private boolean autoDistribute;
+    private boolean isLogScaled;
+    private String shortDescription;
 
     public ColorPaletteDef(double minSample, double maxSample) {
-        this(new Point[]{
-                    new Point(minSample, Color.BLACK),
-                    new Point(maxSample, Color.WHITE)
-        }, 256);
+        this(minSample, 0.5 * (maxSample + minSample), maxSample);
     }
 
     public ColorPaletteDef(double minSample, double centerSample, double maxSample) {
         this(new Point[]{
-                    new Point(minSample, Color.BLACK),
-                    new Point(centerSample, Color.GRAY),
-                    new Point(maxSample, Color.WHITE)
+                new Point(minSample, Color.black),
+                new Point(centerSample, Color.gray),
+                new Point(maxSample, Color.white)
         }, 256);
     }
 
@@ -157,7 +163,6 @@ public class ColorPaletteDef implements Cloneable  {
      *
      * @param index   the index
      * @param scaling the scaling
-     *
      * @return true, if a point has been inserted
      */
     public boolean createPointAfter(int index, Scaling scaling) {
@@ -184,14 +189,13 @@ public class ColorPaletteDef implements Cloneable  {
      *
      * @param c1 1st color
      * @param c2 2nd color
-     *
      * @return the center color
      */
     public static Color getCenterColor(Color c1, Color c2) {
         return new Color(0.5F * (c1.getRed() + c2.getRed()) / 255.0F,
-                         0.5F * (c1.getGreen() + c2.getGreen()) / 255.0F,
-                         0.5F * (c1.getBlue() + c2.getBlue()) / 255.0F,
-                         0.5F * (c1.getAlpha() + c2.getAlpha()) / 255.0F);
+                0.5F * (c1.getGreen() + c2.getGreen()) / 255.0F,
+                0.5F * (c1.getBlue() + c2.getBlue()) / 255.0F,
+                0.5F * (c1.getAlpha() + c2.getAlpha()) / 255.0F);
     }
 
 
@@ -237,6 +241,7 @@ public class ColorPaletteDef implements Cloneable  {
             def.numColors = numColors;
             def.discrete = discrete;
             def.autoDistribute = autoDistribute;
+            def.isLogScaled = isLogScaled;
             return def;
         } catch (CloneNotSupportedException e) {
             throw new RuntimeException(e);
@@ -252,9 +257,7 @@ public class ColorPaletteDef implements Cloneable  {
      * Loads a color palette definition from the given file
      *
      * @param file the file
-     *
      * @return the color palette definition, never null
-     *
      * @throws IOException if an I/O error occurs
      */
     public static ColorPaletteDef loadColorPaletteDef(File file) throws IOException {
@@ -263,7 +266,7 @@ public class ColorPaletteDef implements Cloneable  {
         final int numPoints = propertyMap.getPropertyInt(_PROPERTY_KEY_NUM_POINTS);
         if (numPoints < 2) {
             throw new IOException("The selected file contains less than\n" +
-                                  "two colour points.");
+                    "two colour points.");
         }
         final ColorPaletteDef.Point[] points = new ColorPaletteDef.Point[numPoints];
         double lastSample = 0;
@@ -276,11 +279,16 @@ public class ColorPaletteDef implements Cloneable  {
             }
             point.setColor(color);
             point.setSample(sample);
+            // todo DANNY added this
+            point.setLabel(file.getName());
+            //    System.out.println(point.label);
             points[i] = point;
             lastSample = sample;
         }
         ColorPaletteDef paletteDef = new ColorPaletteDef(points, 256);
         paletteDef.setAutoDistribute(propertyMap.getPropertyBool(_PROPERTY_KEY_AUTODISTRIBUTE, false));
+        paletteDef.setLogScaled(propertyMap.getPropertyBool(_PROPERTY_KEY_IS_LOG_SCALED, false));
+        paletteDef.setShortDescription(propertyMap.getPropertyString(_PROPERTY_KEY_SHORT_DESCRIPTION, ""));
         return paletteDef;
     }
 
@@ -289,7 +297,6 @@ public class ColorPaletteDef implements Cloneable  {
      *
      * @param colorPaletteDef thje color palette definition
      * @param file            the file
-     *
      * @throws IOException if an I/O error occurs
      */
     public static void storeColorPaletteDef(ColorPaletteDef colorPaletteDef, File file) throws IOException {
@@ -298,12 +305,159 @@ public class ColorPaletteDef implements Cloneable  {
         final int numPoints = points.length;
         propertyMap.setPropertyInt(_PROPERTY_KEY_NUM_POINTS, numPoints);
         propertyMap.setPropertyBool(_PROPERTY_KEY_AUTODISTRIBUTE, colorPaletteDef.isAutoDistribute());
+        propertyMap.setPropertyBool(_PROPERTY_KEY_IS_LOG_SCALED, colorPaletteDef.isLogScaled());
+        propertyMap.setPropertyString(_PROPERTY_KEY_SHORT_DESCRIPTION, colorPaletteDef.getShortDescription());
         for (int i = 0; i < numPoints; i++) {
             propertyMap.setPropertyColor(_PROPERTY_KEY_COLOR + i, points[i].getColor());
             propertyMap.setPropertyDouble(_PROPERTY_KEY_SAMPLE + i, points[i].getSample());
         }
-        propertyMap.store(file.toPath(), "BEAM Colour Palette Definition File"); /*I18N*/
+        propertyMap.store(file.toPath(), "SNAP Colour Palette Definition File"); /*I18N*/
     }
+
+//     todo Danny
+//     Commented out in order to do incremental deliveries
+//    /**
+//     * Stores a 256 point generic color palette
+//     *
+//     * @param colorPaletteDef thje color palette definition
+//     * @param file            the file
+//     * @throws IOException if an I/O error occurs
+//     */
+//    public static void storePal(ColorPaletteDef colorPaletteDef, File file) throws IOException {
+//
+//        ArrayList<String> fileContents = new ArrayList<String>();
+//        String DELIMITER = " ";
+//
+//        double min = colorPaletteDef.getMinDisplaySample();
+//        double max = colorPaletteDef.getMaxDisplaySample();
+//        double sample;
+//
+//        for (int i = 0; i < 256; i++) {
+//            double weight = i / 255.0;
+//
+//            if (colorPaletteDef.isLogScaled()) {
+//
+//                sample = ImageLegend.getLogarithmicValueUsingLinearWeight(weight, min, max);
+//            } else {
+//                sample = weight * (max - min) + min;
+//            }
+//            Color color = colorPaletteDef.computeColor(sample);
+//            fileContents.add(getCptColorEntry(color, DELIMITER));
+//
+//        }
+//
+//        printStringArrayListToFile(file, "Generic 256 Point RGB Color Palette", fileContents);
+//    }
+
+
+    /**
+     * Stores  color palette in cpt format
+     *
+     * @param colorPaletteDef thje color palette definition
+     * @param file            the file
+     * @throws IOException if an I/O error occurs
+     */
+    public static void storeCpt(ColorPaletteDef colorPaletteDef, File file) throws IOException {
+
+        ArrayList<String> cptFileContents = new ArrayList<String>();
+        String DELIMITER = " \t";
+        String DELIMITER_BIG = " \t\t";
+
+        final ColorPaletteDef.Point[] points = colorPaletteDef.getPoints();
+        final int numPoints = points.length;
+        boolean discrete = colorPaletteDef.isDiscrete();
+
+
+        int numEntries;
+
+        if (discrete) {
+            numEntries = numPoints;
+        } else {
+            numEntries = numPoints - 1;
+        }
+
+        for (int i = 0; i < numEntries; i++) {
+            String currLine = null;
+
+//            this code would be used if one wanted to include values
+            double currValue = colorPaletteDef.getPointAt(i).getSample();
+            String currValueString = Double.toString(currValue);
+
+            double nextValue;
+            String nextValueString = null;
+
+
+            Color currColor = colorPaletteDef.getPointAt(i).getColor();
+            String currColorString = getCptColorEntry(currColor, DELIMITER);
+
+//            String currValueString = Integer.toString(i) + ".0";
+//            String nextValueString = Integer.toString(i + 1) + ".0";
+
+            if (discrete) {
+                if (i == numPoints - 1) {
+                    if ((i - 1) >= 0) {
+                        double delta = colorPaletteDef.getPointAt(i).getSample() - colorPaletteDef.getPointAt(i - 1).getSample();
+                        nextValue = colorPaletteDef.getPointAt(i).getSample() + delta;
+                        nextValueString = Double.toString(nextValue);
+                    }
+                } else {
+                    nextValue = colorPaletteDef.getPointAt(i + 1).getSample();
+                    nextValueString = Double.toString(nextValue);
+                }
+
+                if (nextValueString != null) {
+                    currLine = "  " + currValueString + DELIMITER + currColorString + DELIMITER_BIG + nextValueString + DELIMITER + currColorString;
+                }
+            } else {
+                nextValue = colorPaletteDef.getPointAt(i + 1).getSample();
+                nextValueString = Double.toString(nextValue);
+                Color nextColor = colorPaletteDef.getPointAt(i + 1).getColor();
+                String nextColorString = getCptColorEntry(nextColor, DELIMITER);
+                currLine = "  " + currValueString + DELIMITER + currColorString + DELIMITER_BIG + nextValueString + DELIMITER + nextColorString;
+            }
+
+            if (currLine != null) {
+                cptFileContents.add(currLine);
+            }
+
+        }
+
+
+        printStringArrayListToFile(file, "CPT Format Color Palette", cptFileContents);
+    }
+
+    private static String getCptColorEntry(Color color, String DELIMITER) {
+
+        String colorRed = Integer.toString(color.getRed());
+        String colorGreen = Integer.toString(color.getGreen());
+        String colorBlue = Integer.toString(color.getBlue());
+        String colorString = colorRed + DELIMITER + colorGreen + DELIMITER + colorBlue;
+
+        return colorString;
+
+    }
+
+    private static void printStringArrayListToFile(File file, String header, ArrayList<String> contentsArrayList) {
+
+        BufferedWriter bos = null;
+        try {
+            bos = new BufferedWriter(new FileWriter(file));
+
+            bos.write("#" + header);
+            bos.newLine();
+
+            for (String currLine : contentsArrayList) {
+                bos.write(currLine);
+                bos.newLine();
+            }
+
+            bos.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
+    }
+
 
     private void check2PointsMinimum() {
         if (getNumPoints() == 2) {
@@ -314,8 +468,10 @@ public class ColorPaletteDef implements Cloneable  {
     /**
      * Releases all of the resources used by this color palette definition and all of its owned children. Its primary
      * use is to allow the garbage collector to perform a vanilla job.
+     * <p/>
      * <p>This method should be called only if it is for sure that this object instance will never be used again. The
      * results of referencing an instance of this class after a call to <code>dispose()</code> are undefined.
+     * <p/>
      * <p>Overrides of this method should always call <code>super.dispose();</code> after disposing this instance.
      */
     public void dispose() {
@@ -333,6 +489,78 @@ public class ColorPaletteDef implements Cloneable  {
         return colors;
     }
 
+//    /**
+//     * @deprecated since BEAM 5.0,  use {@link org.esa.beam.jai.ImageManager#createColorPalette(ImageInfo)} instead
+//     */
+//    @Deprecated
+//    public Color[] createColorPalette(Scaling scaling) {
+//        // @todo 1 tb/tb take care of non-linear scalings 2014-03-26
+//        final Color[] colorPalette = new Color[numColors];
+//        final double displayMin = getMinDisplaySample();
+//        final double displayMax = getMaxDisplaySample();
+//        final double scalingFactor = 1 / (numColors - 1.0);
+//        for (int i = 0; i < numColors; i++) {
+//            final double w = i * scalingFactor;
+//            final double sample = displayMin + w * (displayMax - displayMin);
+//            colorPalette[i] = computeColor(sample, displayMin, displayMax);
+//        }
+//        return colorPalette;
+//    }
+
+    public Color computeColor(final Scaling scaling, final double sample) {
+        // @todo 1 tb/tb take care of non-linear scalings 2014-03-26
+        return computeColor(sample, getMinDisplaySample(), getMaxDisplaySample());
+    }
+
+    private Color computeColor(double sample, double minDisplay, double maxDisplay) {
+        final Color c;
+        if (sample <= minDisplay) {
+            c = getFirstPoint().getColor();
+        } else if (sample >= maxDisplay) {
+            c = getLastPoint().getColor();
+        } else {
+            c = computeColor(sample);
+        }
+        return c;
+    }
+
+    private Color computeColor(final double sample) {
+        for (int i = 0; i < getNumPoints() - 1; i++) {
+            final Point p1 = getPointAt(i);
+            final Point p2 = getPointAt(i + 1);
+            final double sample1 = p1.getSample();
+            final double sample2 = p2.getSample();
+            final Color color1 = p1.getColor();
+            final Color color2 = p2.getColor();
+            if (sample >= sample1 && sample <= sample2) {
+                if (discrete) {
+                    return color1;
+                } else {
+                    return computeColor(sample, sample1, sample2, color1, color2);
+                }
+            }
+        }
+        return Color.BLACK;
+    }
+
+    private Color computeColor(double sample, double sample1, double sample2, Color color1, Color color2) {
+        final double f = (sample - sample1) / (sample2 - sample1);
+        final double r1 = color1.getRed();
+        final double r2 = color2.getRed();
+        final double g1 = color1.getGreen();
+        final double g2 = color2.getGreen();
+        final double b1 = color1.getBlue();
+        final double b2 = color2.getBlue();
+        final double a1 = color1.getAlpha();
+        final double a2 = color2.getAlpha();
+        final int red = (int) MathUtils.roundAndCrop(r1 + f * (r2 - r1), 0L, 255L);
+        final int green = (int) MathUtils.roundAndCrop(g1 + f * (g2 - g1), 0L, 255L);
+        final int blue = (int) MathUtils.roundAndCrop(b1 + f * (b2 - b1), 0L, 255L);
+        final int alpha = (int) MathUtils.roundAndCrop(a1 + f * (a2 - a1), 0L, 255L);
+        return new Color(red, green, blue, alpha);
+    }
+
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -345,6 +573,10 @@ public class ColorPaletteDef implements Cloneable  {
         ColorPaletteDef that = (ColorPaletteDef) o;
 
         if (autoDistribute != that.autoDistribute) {
+            return false;
+        }
+
+        if (isLogScaled != that.isLogScaled) {
             return false;
         }
         if (discrete != that.discrete) {
@@ -366,7 +598,24 @@ public class ColorPaletteDef implements Cloneable  {
         result = 31 * result + numColors;
         result = 31 * result + (discrete ? 1 : 0);
         result = 31 * result + (autoDistribute ? 1 : 0);
+        result = 31 * result + (isLogScaled ? 1 : 0);
         return result;
+    }
+
+    public boolean isLogScaled() {
+        return isLogScaled;
+    }
+
+    public void setLogScaled(boolean logScaled) {
+        isLogScaled = logScaled;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public static class Point implements Cloneable {
