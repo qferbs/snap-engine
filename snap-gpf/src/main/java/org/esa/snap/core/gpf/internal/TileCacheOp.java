@@ -35,7 +35,7 @@ public class TileCacheOp extends Operator {
 
     private static final int MEGABYTES = 1024 * 1024;
     @SourceProduct
-    Product source;
+    Product sourceProduct;
 
     @TargetProduct
     Product target;
@@ -50,8 +50,8 @@ public class TileCacheOp extends Operator {
         SystemUtils.LOG.warning("You are using TileCache operator. Be aware that it is an experimental implementation.");
         
         localCache = JAI.createTileCache(cacheSize * MEGABYTES);
-        Product sourceProduct = getSourceProduct();
-        Band[] bands = sourceProduct.getBands();
+        Product source = getSourceProduct();
+        Band[] bands = source.getBands();
         for (Band band : bands) {
             RenderedImage image = band.getSourceImage().getImage(0);
             if (image instanceof OpImage) {
