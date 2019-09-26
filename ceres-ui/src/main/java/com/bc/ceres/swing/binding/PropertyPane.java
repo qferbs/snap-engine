@@ -26,7 +26,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
-import static com.bc.ceres.swing.TableLayout.cell;
+import static com.bc.ceres.swing.TableLayout.*;
+
+import java.awt.*;
 
 /**
  * A utility class used to create a {@link JPanel} containing default Swing components and their corresponding bindings for the
@@ -41,10 +43,25 @@ import static com.bc.ceres.swing.TableLayout.cell;
  * @version $Revision$ $Date$
  * @
  */
-// JAN2018 - Daniel Knowles - Added method to return property pane as a JScrollPane
+// JAN2019 - Daniel Knowles - Added method to return property pane as a JScrollPane
+
+
+// JAN2019 - Daniel Knowles - Moved some of the logic for adding components to a public method which can also be called by
+//                            the preferences GUIs.
+//                          - Added tooltips: NOTE: actual tooltips values will be added in the future.
+//                            NOTE: this does not contain section breaks which may be added in the future for a future
+//                                  revision of map gridlines and other tools.
+
+// SEP2019 - Daniel Knowles - Added section break logic
+
+
 public class PropertyPane {
 
     private final BindingContext bindingContext;
+    private final static String DASHES = "----------";
+
+
+    public static final String PROPERTY_SECTIONBREAK_NAME_SUFFIX = ".section";
 
     public PropertyPane(PropertySet propertySet) {
         this(new BindingContext(propertySet));
@@ -59,6 +76,7 @@ public class PropertyPane {
     }
 
     public JPanel createPanel() {
+
         PropertySet propertyContainer = bindingContext.getPropertySet();
         Property[] properties = propertyContainer.getProperties();
 
@@ -76,22 +94,9 @@ public class PropertyPane {
             if (isInvisible(descriptor)) {
                 continue;
             }
-            PropertyEditor propertyEditor = registry.findPropertyEditor(descriptor);
-            JComponent[] components = propertyEditor.createComponents(descriptor, bindingContext);
-            if (components.length == 2) {
-                layout.setCellWeightX(rowIndex, 0, 0.0);
-                panel.add(components[1], cell(rowIndex, 0));
-                layout.setCellWeightX(rowIndex, 1, 1.0);
-                if(components[0] instanceof JScrollPane) {
-                    layout.setRowWeightY(rowIndex, 1.0);
-                    layout.setRowFill(rowIndex, TableLayout.Fill.BOTH);
-                }
-                panel.add(components[0], cell(rowIndex, 1));
-            } else {
-                layout.setCellColspan(rowIndex, 0, 2);
-                layout.setCellWeightX(rowIndex, 0, 1.0);
-                panel.add(components[0], cell(rowIndex, 0));
-            }
+
+            addComponent(rowIndex, layout, panel, bindingContext, registry, descriptor);
+
             if (displayUnitColumn) {
                 final JLabel label = new JLabel("");
                 if (descriptor.getUnit() != null) {
@@ -108,6 +113,10 @@ public class PropertyPane {
         panel.add(new JPanel());
         return panel;
     }
+
+
+
+
 
 
 
@@ -147,4 +156,65 @@ public class PropertyPane {
         }
         return showUnitColumn;
     }
+
+
+
+     /*
+     * Adds a property component to the panel.
+     * Note: A property will be treated as a section break if the property name ends with ".section"
+     *
+     * @author Brockmann Consult
+     * @author Daniel Knowles
+     * @since Jan 2019
+     */
+    // JAN2019 - Daniel Knowles - Split out this method from the original inline flow and made this method public to
+    //                            enable the preferences GUIs to also call this.  Note: this call from the preferences
+    //                            GUIs is not currently being made by the master but may be made in future by the future
+    //                            revisions of the map gridline GUIs
+    //                          - Added tooltips
+    //
+    //
+    // SEP2019 - Daniel Knowles - Added section break logic
+
+    static public JComponent[] addComponent(int rowIndex, TableLayout layout, JPanel panel, BindingContext bindingContext,
+                                            PropertyEditorRegistry registry, PropertyDescriptor descriptor) {
+
+        PropertyEditor propertyEditor = registry.findPropertyEditor(descriptor);
+        JComponent[] components = propertyEditor.createComponents(descriptor, bindingContext);
+
+        if (components.length == 2) {
+            components[0].setToolTipText(descriptor.getDescription());
+            components[1].setToolTipText(descriptor.getDescription());
+            layout.setCellWeightX(rowIndex, 0, 0.0);
+            panel.add(components[1], cell(rowIndex, 0));
+            layout.setCellWeightX(rowIndex, 1, 1.0);
+            if(components[0] instanceof JScrollPane) {
+                layout.setRowWeightY(rowIndex, 1.0);
+                layout.setRowFill(rowIndex, TableLayout.Fill.BOTH);
+            }
+            panel.add(components[0], cell(rowIndex, 1));
+        } else {
+            layout.setCellColspan(rowIndex, 0, 2);
+            layout.setCellWeightX(rowIndex, 0, 1.0);
+            if (descriptor.getName().endsWith(PROPERTY_SECTIONBREAK_NAME_SUFFIX)) {
+                if (descriptor.getDisplayName() != null && descriptor.getDisplayName().length() > 0 ) {
+                    JLabel sectionLabel = new JLabel(DASHES + " " + descriptor.getDisplayName() + " " + DASHES);
+                    sectionLabel.setToolTipText(descriptor.getDescription());
+                    sectionLabel.setForeground(Color.BLACK);
+                    Font sectionFont=new Font(sectionLabel.getFont().getName(),Font.ITALIC,sectionLabel.getFont().getSize());
+                    sectionLabel.setFont(sectionFont);
+                    panel.add(sectionLabel);
+                } else {
+                    panel.add(new JLabel(" "));
+                }
+            } else {
+                components[0].setToolTipText(descriptor.getDescription());
+                panel.add(components[0], cell(rowIndex, 0));
+            }
+        }
+
+        return components;
+    }
+
+
 }
