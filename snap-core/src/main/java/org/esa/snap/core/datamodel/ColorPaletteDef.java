@@ -39,6 +39,7 @@ public class ColorPaletteDef implements Cloneable  {
     private final static String _PROPERTY_KEY_NUM_POINTS = "numPoints";
     private final static String _PROPERTY_KEY_COLOR = "color";
     private final static String _PROPERTY_KEY_SAMPLE = "sample";
+    private final static String _PROPERTY_KEY_IS_LOG_SCALED = "isLogScaled";
     private final static String _PROPERTY_KEY_AUTODISTRIBUTE = "autoDistribute";
 
     /**
@@ -48,6 +49,8 @@ public class ColorPaletteDef implements Cloneable  {
     private int numColors;
     private boolean discrete;
     private boolean autoDistribute;
+    private boolean isLogScaled;
+
 
     public ColorPaletteDef(double minSample, double maxSample) {
         this(new Point[]{
@@ -281,6 +284,7 @@ public class ColorPaletteDef implements Cloneable  {
         }
         ColorPaletteDef paletteDef = new ColorPaletteDef(points, 256);
         paletteDef.setAutoDistribute(propertyMap.getPropertyBool(_PROPERTY_KEY_AUTODISTRIBUTE, false));
+        paletteDef.setLogScaled(propertyMap.getPropertyBool(_PROPERTY_KEY_IS_LOG_SCALED, false));
         return paletteDef;
     }
 
@@ -298,6 +302,8 @@ public class ColorPaletteDef implements Cloneable  {
         final int numPoints = points.length;
         propertyMap.setPropertyInt(_PROPERTY_KEY_NUM_POINTS, numPoints);
         propertyMap.setPropertyBool(_PROPERTY_KEY_AUTODISTRIBUTE, colorPaletteDef.isAutoDistribute());
+        propertyMap.setPropertyBool(_PROPERTY_KEY_IS_LOG_SCALED, colorPaletteDef.isLogScaled());
+
         for (int i = 0; i < numPoints; i++) {
             propertyMap.setPropertyColor(_PROPERTY_KEY_COLOR + i, points[i].getColor());
             propertyMap.setPropertyDouble(_PROPERTY_KEY_SAMPLE + i, points[i].getSample());
@@ -347,6 +353,9 @@ public class ColorPaletteDef implements Cloneable  {
         if (autoDistribute != that.autoDistribute) {
             return false;
         }
+        if (isLogScaled != that.isLogScaled) {
+            return false;
+        }
         if (discrete != that.discrete) {
             return false;
         }
@@ -367,6 +376,14 @@ public class ColorPaletteDef implements Cloneable  {
         result = 31 * result + (discrete ? 1 : 0);
         result = 31 * result + (autoDistribute ? 1 : 0);
         return result;
+    }
+
+    public boolean isLogScaled() {
+        return isLogScaled;
+    }
+
+    public void setLogScaled(boolean logScaled) {
+        isLogScaled = logScaled;
     }
 
     public static class Point implements Cloneable {
