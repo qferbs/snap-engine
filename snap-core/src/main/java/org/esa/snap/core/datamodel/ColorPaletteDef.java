@@ -19,10 +19,14 @@ import com.bc.ceres.core.Assert;
 import org.esa.snap.core.util.DefaultPropertyMap;
 import org.esa.snap.core.util.Guardian;
 import org.esa.snap.core.util.PropertyMap;
+import org.esa.snap.core.util.math.MathUtils;
 
 import java.awt.Color;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Vector;
@@ -39,8 +43,8 @@ public class ColorPaletteDef implements Cloneable  {
     private final static String _PROPERTY_KEY_NUM_POINTS = "numPoints";
     private final static String _PROPERTY_KEY_COLOR = "color";
     private final static String _PROPERTY_KEY_SAMPLE = "sample";
-    private final static String _PROPERTY_KEY_IS_LOG_SCALED = "isLogScaled";
     private final static String _PROPERTY_KEY_AUTODISTRIBUTE = "autoDistribute";
+    private final static String _PROPERTY_KEY_IS_LOG_SCALED = "isLogScaled";
 
     /**
      * this curve's points
@@ -240,6 +244,7 @@ public class ColorPaletteDef implements Cloneable  {
             def.numColors = numColors;
             def.discrete = discrete;
             def.autoDistribute = autoDistribute;
+            def.isLogScaled = isLogScaled;
             return def;
         } catch (CloneNotSupportedException e) {
             throw new RuntimeException(e);
@@ -268,10 +273,10 @@ public class ColorPaletteDef implements Cloneable  {
             throw new IOException("The selected file contains less than\n" +
                                   "two colour points.");
         }
-        final ColorPaletteDef.Point[] points = new ColorPaletteDef.Point[numPoints];
+        final Point[] points = new Point[numPoints];
         double lastSample = 0;
         for (int i = 0; i < points.length; i++) {
-            final ColorPaletteDef.Point point = new ColorPaletteDef.Point();
+            final Point point = new Point();
             final Color color = propertyMap.getPropertyColor(_PROPERTY_KEY_COLOR + i);
             double sample = propertyMap.getPropertyDouble(_PROPERTY_KEY_SAMPLE + i);
             if (i > 0 && sample < lastSample) {
@@ -284,7 +289,6 @@ public class ColorPaletteDef implements Cloneable  {
         }
         ColorPaletteDef paletteDef = new ColorPaletteDef(points, 256);
         paletteDef.setAutoDistribute(propertyMap.getPropertyBool(_PROPERTY_KEY_AUTODISTRIBUTE, false));
-        paletteDef.setLogScaled(propertyMap.getPropertyBool(_PROPERTY_KEY_IS_LOG_SCALED, false));
         return paletteDef;
     }
 
@@ -297,13 +301,12 @@ public class ColorPaletteDef implements Cloneable  {
      * @throws IOException if an I/O error occurs
      */
     public static void storeColorPaletteDef(ColorPaletteDef colorPaletteDef, File file) throws IOException {
-        final ColorPaletteDef.Point[] points = colorPaletteDef.getPoints();
+        final Point[] points = colorPaletteDef.getPoints();
         final PropertyMap propertyMap = new DefaultPropertyMap();
         final int numPoints = points.length;
         propertyMap.setPropertyInt(_PROPERTY_KEY_NUM_POINTS, numPoints);
         propertyMap.setPropertyBool(_PROPERTY_KEY_AUTODISTRIBUTE, colorPaletteDef.isAutoDistribute());
         propertyMap.setPropertyBool(_PROPERTY_KEY_IS_LOG_SCALED, colorPaletteDef.isLogScaled());
-
         for (int i = 0; i < numPoints; i++) {
             propertyMap.setPropertyColor(_PROPERTY_KEY_COLOR + i, points[i].getColor());
             propertyMap.setPropertyDouble(_PROPERTY_KEY_SAMPLE + i, points[i].getSample());
@@ -375,9 +378,9 @@ public class ColorPaletteDef implements Cloneable  {
         result = 31 * result + numColors;
         result = 31 * result + (discrete ? 1 : 0);
         result = 31 * result + (autoDistribute ? 1 : 0);
+        result = 31 * result + (isLogScaled ? 1 : 0);
         return result;
     }
-
     public boolean isLogScaled() {
         return isLogScaled;
     }

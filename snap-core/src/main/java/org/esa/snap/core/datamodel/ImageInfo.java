@@ -47,7 +47,6 @@ public class ImageInfo implements Cloneable {
 
     private static final double FORCED_CHANGE_FACTOR = 0.0001;
 
-
     /**
      * Enumerates the possible histogram matching modes.
      */
@@ -296,8 +295,6 @@ public class ImageInfo implements Cloneable {
         }
     }
 
-
-
     /**
      * Transfers the colour palette into this image info.
      *
@@ -313,66 +310,35 @@ public class ImageInfo implements Cloneable {
     }
 
     private static void transferPoints(ColorPaletteDef sourceCPD,
-                                       double minTargetValue,
-                                       double maxTargetValue,
+                                       double minSample,
+                                       double maxSample,
                                        boolean autoDistribute,
                                        ColorPaletteDef targetCPD) {
 
         if (autoDistribute || sourceCPD.isAutoDistribute()) {
             alignNumPoints(sourceCPD, targetCPD);
-            double minSourceValue = sourceCPD.getMinDisplaySample();
-            double maxSourceValue = sourceCPD.getMaxDisplaySample();
-            double delta1 = (maxTargetValue > minTargetValue) ? maxTargetValue - minTargetValue : 1.0;
-            double delta2 = (maxSourceValue > minSourceValue) ? maxSourceValue - minSourceValue : 1.0;
+            double minDisplaySample = sourceCPD.getMinDisplaySample();
+            double maxDisplaySample = sourceCPD.getMaxDisplaySample();
+            double delta1 = (maxSample > minSample) ? maxSample - minSample : 1.0;
+            double delta2 = (maxDisplaySample > minDisplaySample) ? maxDisplaySample - minDisplaySample : 1.0;
             double b = delta1 / delta2;
-            double a = minTargetValue - minSourceValue * b;
-
-//            if (1 == 1) {
-//                for (int i = 0; i < sourceCPD.getNumPoints(); i++) {
-//                    if (maxTargetValue != minTargetValue) {
-//                        double weight = (sourceCPD.getPointAt(i).getSample() - minTargetValue) / (minTargetValue - maxTargetValue);
-//                        double logValue = getLogarithmicValueUsingLinearWeight(weight, minTargetValue, maxTargetValue);
-//                        targetCPD.getPointAt(i).setSample(logValue);
-//                        targetCPD.getPointAt(i).setColor(sourceCPD.getPointAt(i).getColor());
-//                        targetCPD.getPointAt(i).setLabel(sourceCPD.getPointAt(i).getLabel());
-//                    }
-//                }
-//            } else {
+            double a = minSample - minDisplaySample * b;
             for (int i = 0; i < sourceCPD.getNumPoints(); i++) {
-                double currTargetValue;
-                if (i == 0) {
-                    currTargetValue = minTargetValue;
-                } else if (i == sourceCPD.getNumPoints() - 1) {
-                    currTargetValue = maxTargetValue;
-                } else {
-                    currTargetValue = a + b * sourceCPD.getPointAt(i).getSample();
-                }
-
-                targetCPD.getPointAt(i).setSample(currTargetValue);
+                targetCPD.getPointAt(i).setSample(a + b * sourceCPD.getPointAt(i).getSample());
                 targetCPD.getPointAt(i).setColor(sourceCPD.getPointAt(i).getColor());
                 targetCPD.getPointAt(i).setLabel(sourceCPD.getPointAt(i).getLabel());
-//                }
             }
         } else {
             targetCPD.setPoints(sourceCPD.getPoints().clone());
         }
     }
 
-
-
-    /**
-     * Transfers the colour palette into this image info.
-     *
-     * @param colorPaletteDef another colour palette
-     * @param minSample       the minium allowed sample value in the new colour palette
-     * @param maxSample       the maximum allowed sample value in the new colour palette
-     * @param autoDistribute  if true, points are distributed between minSample/maxSample.
-     */
     public void setColorPaletteDef(ColorPaletteDef colorPaletteDef,
                                    double minSample,
                                    double maxSample, boolean autoDistribute, boolean isSourceLogScaled, boolean isTargetLogScaled) {
         transferPoints(colorPaletteDef, minSample, maxSample, autoDistribute, getColorPaletteDef(), isSourceLogScaled, isTargetLogScaled);
     }
+
 
     private static void transferPoints(ColorPaletteDef sourceCPD,
                                        double minTargetValue,
@@ -430,6 +396,7 @@ public class ImageInfo implements Cloneable {
         }
 
     }
+
 
     private static double getLogarithmicValue(double linearValue, double min, double max) {
 
@@ -528,8 +495,6 @@ public class ImageInfo implements Cloneable {
     }
 
 
-
-
     private static void alignNumPoints(ColorPaletteDef sourceCPD, ColorPaletteDef targetCPD) {
         int deltaNumPoints = targetCPD.getNumPoints() - sourceCPD.getNumPoints();
         if (deltaNumPoints < 0) {
@@ -548,14 +513,14 @@ public class ImageInfo implements Cloneable {
      *
      * @param mode the histogram matching string
      *
-     * @return the histogram matching. {@link ImageInfo.HistogramMatching#None} if {@code maode} is not "Equalize" or "Normalize".
+     * @return the histogram matching. {@link HistogramMatching#None} if {@code maode} is not "Equalize" or "Normalize".
      */
-    public static ImageInfo.HistogramMatching getHistogramMatching(String mode) {
-        ImageInfo.HistogramMatching histogramMatchingEnum = ImageInfo.HistogramMatching.None;
+    public static HistogramMatching getHistogramMatching(String mode) {
+        HistogramMatching histogramMatchingEnum = HistogramMatching.None;
         if ("Equalize".equalsIgnoreCase(mode)) {
-            histogramMatchingEnum = ImageInfo.HistogramMatching.Equalize;
+            histogramMatchingEnum = HistogramMatching.Equalize;
         } else if ("Normalize".equalsIgnoreCase(mode)) {
-            histogramMatchingEnum = ImageInfo.HistogramMatching.Normalize;
+            histogramMatchingEnum = HistogramMatching.Normalize;
         }
         return histogramMatchingEnum;
     }
