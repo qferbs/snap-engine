@@ -842,6 +842,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.0.0-M3</version>
                     <configuration>
+                        <useSystemClassLoader>false</useSystemClassLoader>
                         <!--
                              If enabled some assertions in GeoTools fail.
                              Disabling helps to have a successful build.
