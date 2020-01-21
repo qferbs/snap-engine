@@ -867,8 +867,6 @@
                             <org.esa.snap.testdata.out>target/test-data</org.esa.snap.testdata.out>
                         </systemPropertyVariables>
                         <argLine>-Xmx1024M -Dfile.encoding=UTF-8 @{argLine}</argLine>
-                        <!-- Test to avoid error on build server -->
-                        <forkCount>0</forkCount>
                     </configuration>
                 </plugin>
 
