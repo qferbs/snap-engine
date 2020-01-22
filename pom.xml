@@ -866,7 +866,7 @@
                         <systemPropertyVariables>
                             <org.esa.snap.testdata.out>target/test-data</org.esa.snap.testdata.out>
                         </systemPropertyVariables>
-                        <argLine>-Xmx1024M -XX:MaxPermSize=256m -Dfile.encoding=UTF-8 @{argLine}</argLine>
+                        <argLine>-Xmx1024M -Dfile.encoding=UTF-8 @{argLine}</argLine>
                     </configuration>
                 </plugin>
 
