@@ -30,6 +30,7 @@ import static org.junit.Assert.fail;
 /**
  * @author Marco Peters
  */
+@Ignore("Native NetCDF libraries are currently not loaded in tests")
 public class GloballyShiftedDataTest {
 
     private static File tempFile;

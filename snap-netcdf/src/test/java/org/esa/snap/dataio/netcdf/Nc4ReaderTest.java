@@ -27,6 +27,7 @@ import org.esa.snap.core.gpf.GPF;
 import org.esa.snap.core.util.DummyProductBuilder;
 import org.esa.snap.dataio.netcdf.metadata.profiles.cf.CfNetCdfReaderPlugIn;
 import org.esa.snap.runtime.Config;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -104,6 +105,7 @@ public class Nc4ReaderTest {
     }
 
     @Test
+    @Ignore("Native NetCDF libraries are currently not loaded in tests")
     public void testWithExistingLatLonBandsAndCrsGeoCoding() throws IOException {
         DummyProductBuilder pb = new DummyProductBuilder();
         pb.size(DummyProductBuilder.Size.SMALL);

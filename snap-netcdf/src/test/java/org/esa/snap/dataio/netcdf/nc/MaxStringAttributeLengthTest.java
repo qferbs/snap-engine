@@ -3,6 +3,7 @@ package org.esa.snap.dataio.netcdf.nc;
 import org.esa.snap.dataio.netcdf.NetCdfActivator;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import ucar.ma2.DataType;
 
@@ -15,6 +16,7 @@ import java.util.stream.IntStream;
 /**
  * @author Marco Peters
  */
+@Ignore("Native NetCDF libraries are currently not loaded in tests")
 public class MaxStringAttributeLengthTest {
 
     static {
