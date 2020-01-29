@@ -1,5 +1,6 @@
 package org.esa.snap.dataio.netcdf.nc;
 
+import org.esa.snap.dataio.netcdf.NetCdfActivator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,6 +17,10 @@ import java.util.stream.IntStream;
  */
 public class MaxStringAttributeLengthTest {
 
+    static {
+        new NetCdfActivator().start();
+    }
+
     private static final int TOO_LONG = N4Variable.MAX_ATTRIBUTE_LENGTH + 10;
     private NFileWriteable nc4Writable;
     private NFileWriteable nc3Writable;
@@ -25,7 +30,7 @@ public class MaxStringAttributeLengthTest {
     @Before
     public void setUp() throws Exception {
         nc4TempFile = Files.createTempFile(getClass().getSimpleName(), "nc4");
-        nc4Writable = NWritableFactory.create(nc4TempFile.toString(),"netcdf4");
+        nc4Writable = NWritableFactory.create(nc4TempFile.toString(), "netcdf4");
         nc3TempFile = Files.createTempFile(getClass().getSimpleName(), "nc3");
         nc3Writable = NWritableFactory.create(nc3TempFile.toString(),"netcdf3");
     }

@@ -36,13 +36,18 @@ import java.net.URLDecoder;
 import java.util.Calendar;
 import java.util.HashMap;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Ralf Quast
  * @version $Revision: 2182 $ $Date: 2008-06-12 11:09:11 +0200 (Do, 12 Jun 2008) $
  */
 public class Nc4ReaderTest {
+    static {
+        new NetCdfActivator().start();
+    }
 
     @Test
     public void testGlobalAttributes() throws IOException {
