@@ -24,7 +24,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * @author Marco Peters
@@ -42,6 +43,8 @@ public class GloballyShiftedDataTest {
     // This test relates to https://senbox.atlassian.net/browse/SNAP-950
     @BeforeClass
     public static void createTestDataFile() throws IOException {
+
+        new NetCdfActivator().start();
 
         tempFile = File.createTempFile(GloballyShiftedDataTest.class.getSimpleName(), ".nc");
 //        tempFile = new File(String.format("%s\\%s.nc", System.getProperty("user.home"), GloballyShiftedDataTest.class.getSimpleName()));
