@@ -43,6 +43,9 @@ public class GloballyShiftedDataTest {
     // This test relates to https://senbox.atlassian.net/browse/SNAP-950
     @BeforeClass
     public static void createTestDataFile() throws IOException {
+//        Assume.assumeTrue("Runs only on windows", isWindows());
+
+        System.out.println("**************** is Running Windows: " + isWindows());
 
         new NetCdfActivator().start();
 
@@ -178,9 +181,14 @@ public class GloballyShiftedDataTest {
 //            String userHome = System.getProperty("user.home");
 //            String path = String.format("%s\\%s_Level%d.png", userHome, GloballyShiftedDataTest.class.getSimpleName(), level);
 //            File imageFile = new File(path);
-              // needs to be tiff 32-bit int is not supported by png
+            // needs to be tiff 32-bit int is not supported by png
 //            ImageIO.write(levelImage, "TIFF", imageFile);
         }
 
     }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().startsWith("win");
+    }
+
 }
