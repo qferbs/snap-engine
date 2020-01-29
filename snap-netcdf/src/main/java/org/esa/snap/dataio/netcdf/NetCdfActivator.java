@@ -33,7 +33,9 @@ public class NetCdfActivator implements Activator {
         }
 
         String arch = System.getProperty("os.arch").toLowerCase();
-        Nc4Iosp.setLibraryAndPath(auxdataDirectory.toAbsolutePath().resolve(arch).toString(), null);
+        String jna_path = auxdataDirectory.toAbsolutePath().resolve(arch).toString();
+        System.out.println("****netcdf_jna_path = " + jna_path);
+        Nc4Iosp.setLibraryAndPath(jna_path, null);
     }
 
     @Override
